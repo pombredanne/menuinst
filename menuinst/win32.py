@@ -2,40 +2,41 @@
 # Copyright (c) 2013 Continuum Analytics, Inc.
 # All rights reserved.
 
+from __future__ import absolute_import
+
 import os
-from os.path import expanduser, isdir, join
+import sys
+from os.path import expanduser, isdir, join, exists
 
-from utils import rm_empty_dir, rm_rf
-import wininst
-from wininst import get_special_folder_path as get_folder
+from .utils import rm_empty_dir, rm_rf
+from .csidl import get_folder_path
+from .winshortcut import create_shortcut
 
+mode = ('user' if exists(join(sys.prefix, '.nonadmin')) else 'system')
 
-mode = 'system'
-quicklaunch_dir = join(get_folder('CSIDL_APPDATA'),
+quicklaunch_dir = join(get_folder_path('CSIDL_APPDATA'),
                        "Microsoft", "Internet Explorer", "Quick Launch")
 
 if mode == 'system':
-    desktop_dir = get_folder('CSIDL_COMMON_DESKTOPDIRECTORY')
-    start_menu = get_folder('CSIDL_COMMON_PROGRAMS')
+    desktop_dir = get_folder_path('CSIDL_COMMON_DESKTOPDIRECTORY')
+    start_menu = get_folder_path('CSIDL_COMMON_PROGRAMS')
 else:
-    desktop_dir = get_folder('CSIDL_DESKTOPDIRECTORY')
-    start_menu = get_folder('CSIDL_PROGRAMS')
-
+    desktop_dir = get_folder_path('CSIDL_DESKTOPDIRECTORY')
+    start_menu = get_folder_path('CSIDL_PROGRAMS')
 
 def quoted(s):
     """
     quotes a string if necessary.
     """
     # strip any existing quotes
-    s = s.strip('"')
-    if ' ' in s or '/' in s:
-        return '"%s"' % s
+    s = s.strip(u'"')
+    if u' ' in s or u'/' in s:
+        return u'"%s"' % s
     else:
         return s
 
 
 class Menu(object):
-
     def __init__(self, name):
         self.path = join(start_menu, name)
 
@@ -48,7 +49,6 @@ class Menu(object):
 
 
 class ShortCut(object):
-
     def __init__(self, menu, shortcut, prefix):
         """
         Prefix is the system prefix to be used -- this is needed since
@@ -82,8 +82,8 @@ class ShortCut(object):
         for a, b in [
             ('${PYTHON_SCRIPTS}', join(self.prefix, 'Scripts')),
             ('${MENU_DIR}', join(self.prefix, 'Menu')),
-            ('${PERSONALDIR}', get_folder('CSIDL_PERSONAL')),
-            ('${USERPROFILE}', get_folder('CSIDL_PROFILE')),
+            ('${PERSONALDIR}', get_folder_path('CSIDL_PERSONAL')),
+            ('${USERPROFILE}', get_folder_path('CSIDL_PROFILE')),
             ]:
             args = [s.replace(a, b) for s in args]
             workdir = workdir.replace(a, b)
@@ -115,15 +115,15 @@ class ShortCut(object):
             if remove:
                 rm_rf(dst)
             else:
-                # The API for the call to 'wininst.create_shortcut' has 3
+                # The API for the call to 'create_shortcut' has 3
                 # required arguments (path, description and filename)
                 # and 4 optional ones (args, working_dir, icon_path and
                 # icon_index).
-                wininst.create_shortcut(
-                    quoted(cmd),
-                    self.shortcut['name'],
-                    dst,
-                    ' '.join(quoted(arg) for arg in args),
-                    workdir,
-                    icon,
+                create_shortcut(
+                    u'' + quoted(cmd),
+                    u'' + self.shortcut['name'],
+                    u'' + dst,
+                    u' '.join(quoted(arg) for arg in args),
+                    u'' + workdir,
+                    u'' + icon,
                 )
